@@ -1,4 +1,4 @@
-package projecte_ia.src;
+package src;
 
 import aima.search.framework.GoalTest;
 

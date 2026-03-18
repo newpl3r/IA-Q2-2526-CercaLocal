@@ -1,4 +1,4 @@
-package projecte_ia.src;
+package src;
 
 import IA.Desastres.*;
 import java.util.ArrayList;
