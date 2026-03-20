@@ -2,6 +2,8 @@ package src;
 
 import IA.Desastres.*;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 public class ProbBoard {
 
@@ -35,6 +37,7 @@ public class ProbBoard {
         // Cridem a una de les nostres estratègies inicials per pujar tota aquesta gent als helicòpters.
         generarSolucioAleatoria();
         //generarSolucioAvariciosa(); // Si volem provar l'altra estratègia, comentem la de dalt i descomentem aquesta.
+        //generarSolucioAvariciosa2();
     }
 
     /**
@@ -146,6 +149,119 @@ public class ProbBoard {
             if (ultimViatge.size() < 3 && (personesAlViatge + personesDelGrup) <= 15) {
                 ultimViatge.add(idGrup);
             } else {
+                ArrayList<Integer> nouViatge = new ArrayList<>();
+                nouViatge.add(idGrup);
+                viatgesHeli.add(nouViatge);
+            }
+        }
+    }
+
+    /**
+     * ESTRATÈGIA 3: Solució Avariciosa 2. Busquem sempre l'helicòpter que minimitzi
+     * el valor: "Distància a grup del seu Centre" x "Nombre de viatges"
+     * La idea és que no hi hagi un helicòpter que faci 14 viatges quan un altre fa 2,
+     * encara que estigui més aprop.
+     */
+    private void generarSolucioAvariciosa2() {
+        int helisPerCentre = numHelicopters / totsElsCentres.size();
+        java.util.Random rand = new java.util.Random();
+
+        for (int idGrup = 0; idGrup < totsElsGrups.size(); idGrup++) {
+
+            Grupo grup = totsElsGrups.get(idGrup);
+            int personesDelGrup = grup.getNPersonas();
+
+            // PAS 1: Cercarem en tots els centres quin helicopter minimitza
+            // el valor -> Distancia x Num. Viatges.
+
+            int idHeliMinim = -1;
+            double valorMinim = Double.MAX_VALUE;
+
+            for (int idCentre = 0; idCentre < totsElsCentres.size(); idCentre++) {
+                Centro centre = totsElsCentres.get(idCentre);
+
+                // PAS 1.1: Trobem la distància.
+                double dx = grup.getCoordX() - centre.getCoordX();
+                double dy = grup.getCoordY() - centre.getCoordY();
+                double distancia = Math.sqrt(dx * dx + dy * dy);
+
+                // PAS 1.2: Trobem l'helicopter amb el mínim nombre de viatges del centre actual.
+                int heliInicial = (idCentre*helisPerCentre);
+                int idHeliActual = -1;
+                int numViatgesActual = Integer.MAX_VALUE;
+
+                for (int idHeli = heliInicial; idHeli < heliInicial+helisPerCentre; idHeli++) {
+                    int numViatgesHeli = assignacioHelicopters.get(idHeli).size();
+                    if (numViatgesActual > numViatgesHeli) {
+                        numViatgesActual = numViatgesHeli;
+                        idHeliActual = idHeli;
+                    }
+                }
+
+                // PAS 1.3: Multipliquem els dos valors
+                double valorActual = distancia * numViatgesActual;
+
+                // PAS 1.4: Comprovem si es menor que el de l'helicopter ja guardat
+                // Si ho és, actualitzem els valors
+                if (valorMinim > valorActual) {
+                    idHeliMinim = idHeliActual;
+                    valorMinim = valorActual;
+                }
+                // En cas d'empat, escollim l'helicòpter amb el menor
+                // nombre de persones en l'últim viatge
+                else if (valorMinim == valorActual) {
+
+                    // 1. Calcul de persones per l'helicopter minim
+                    ArrayList<ArrayList<Integer>> viatgesHeli = assignacioHelicopters.get(idHeliMinim);
+                    if (viatgesHeli.isEmpty()) {
+                        viatgesHeli.add(new ArrayList<>());
+                    }
+                    ArrayList<Integer> ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
+
+                    int personesMinim = 0;
+                    for (int idGrupViatge : ultimViatge) {
+                        personesMinim += totsElsGrups.get(idGrupViatge).getNPersonas();
+                    }
+
+                    // 2. Calcul de persones per l'helicopter d'aquesta iteracio
+                    viatgesHeli = assignacioHelicopters.get(idHeliActual);
+                    if (viatgesHeli.isEmpty()) {
+                        viatgesHeli.add(new ArrayList<>());
+                    }
+                    ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
+
+                    int personesActual = 0;
+                    for (int idGrupViatge : ultimViatge) {
+                        personesActual += totsElsGrups.get(idGrupViatge).getNPersonas();
+                    }
+
+                    // 3. Escollim l'helicopter amb menys persones en l'ultim viatge
+                    if (personesMinim > personesActual) {
+                        idHeliMinim = idHeliActual;
+                        valorMinim = valorActual;
+                    }
+                }
+            }
+
+            // PAS 2: Pugem el grup a l'helicòpter escollit, vigilant de no superar el pes màxim.
+
+            ArrayList<ArrayList<Integer>> viatgesHeli = assignacioHelicopters.get(idHeliMinim);
+
+            if (viatgesHeli.isEmpty()) {
+                viatgesHeli.add(new ArrayList<>());
+            }
+
+            ArrayList<Integer> ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
+
+            int personesAlViatge = 0;
+            for (int idGrupViatge : ultimViatge) {
+                personesAlViatge += totsElsGrups.get(idGrupViatge).getNPersonas();
+            }
+
+            if (ultimViatge.size() < 3 && (personesAlViatge + personesDelGrup) <= 15) {
+                ultimViatge.add(idGrup);
+            }
+            else {
                 ArrayList<Integer> nouViatge = new ArrayList<>();
                 nouViatge.add(idGrup);
                 viatgesHeli.add(nouViatge);
