@@ -11,6 +11,10 @@ public class ProbSuccessorFunction implements SuccessorFunction {
         ArrayList<Successor> retval = new ArrayList<>();
         ProbBoard board = (ProbBoard) state;
 
+        // Mostrem l'heuristic per pantalla cada cop que la cerca demana generar nous succesors
+        ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
+        System.out.println("Heuristic: " + heuristic.getHeuristicValue(board));
+
         // --- EXECUTANT L'OPERADOR 1 (MOURE) ---
         // Aquí li diem a la IA: "ullera tots els racons". Fem bucles per explorar absolutament
         // cada helicòpter, cada viatge i cada grup que tenim al mapa.
@@ -36,6 +40,9 @@ public class ProbSuccessorFunction implements SuccessorFunction {
 
                             // Guardem aquesta combinació de futur possible.
                             retval.add(new Successor(accio, nouEstat));
+
+                            // Imprimim informació sobre aquest canvi per pantalla
+                            // System.out.println("Acció: " + accio + "\n--> Cost: " + heuristic.getHeuristicValue(nouEstat));
                         }
                     }
                 }
@@ -64,6 +71,8 @@ public class ProbSuccessorFunction implements SuccessorFunction {
                                     // Si ha funcionat, ens guardem l'estat futur.
                                     String accio = "Intercanvia grup de l'Heli " + h1 + " amb Heli " + h2;
                                     retval.add(new Successor(accio, nouEstat));
+                                    // Imprimim informació sobre aquest canvi per pantalla
+                                    // System.out.println("Acció: " + accio + "\n--> Cost: " + heuristic.getHeuristicValue(nouEstat));
                                 }
                             }
                         }
@@ -71,7 +80,6 @@ public class ProbSuccessorFunction implements SuccessorFunction {
                 }
             }
         }
-
         // Retornem la llista on hem anotat els centenars de combinacions que hem trobat.
         // L'AIMA buscarà quina és la millor i seguirà des d'allà.
         return retval;

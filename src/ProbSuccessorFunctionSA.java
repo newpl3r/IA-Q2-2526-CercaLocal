@@ -13,6 +13,10 @@ public class ProbSuccessorFunctionSA implements SuccessorFunction {
         ProbBoard board = (ProbBoard) state;
         Random rand = new Random();
 
+        // Mostrem l'heuristic per pantalla cada cop que la cerca demana generar nous succesors
+        ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
+        // System.out.println("Heuristic: " + heuristic.getHeuristicValue(board)); --> Descomentar si volem mostrar
+
         ProbBoard nouEstat = new ProbBoard(board);
         String accio = "";
 

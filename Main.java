@@ -1,5 +1,6 @@
 import java.util.Properties;
 import java.util.Iterator;
+import java.util.Scanner;
 import aima.search.framework.Problem;
 import aima.search.framework.Search;
 import aima.search.framework.SearchAgent;
@@ -18,26 +19,65 @@ public class Main {
         board.imprimirEstat();
         //System.exit(0); // Podem descomentar això si només volem veure l'estat inicial i aturar el programa.
 
-        // 2. Creem el problema per a la llibreria d'AIMA. Li passem el nostre tauler,
-        // la funció que genera els moviments (ara mateix SA), el test de meta i com calculem el temps.
-        Problem p = new Problem(
-                board,
-                new ProbSuccessorFunctionSA(), // Funció que triarà un moviment a l'atzar
-                new ProbGoalTest(),
-                new ProbHeuristicFunction()
-        );
+        // 2. Preguntem a l'usuari quin tipus de cerca vol executar
+        int tipusCerca = llegirTipusCerca();
+        if (tipusCerca == 1) {
+            // 3. Creem el problema per a la llibreria d'AIMA. Li passem el nostre tauler,
+            // la funció que genera els moviments (ara mateix HC), el test de meta i com calculem el temps.
+            Problem p = new Problem(
+                    board,
+                    new ProbSuccessorFunction(), // Funció que explorarà totes les combinacions possibles
+                    new ProbGoalTest(),
+                    new ProbHeuristicFunction()
+            );
 
-        // 3. Preparem l'algorisme de Simulated Annealing (Recuita Simulada).
-        // Aquests números són els paràmetres que anirem canviant per fer els experiments de la pràctica.
-        Search alg = new SimulatedAnnealingSearch(10000, 100, 5, 0.001);
+            // 4. Preparem l'algorisme de Hill Climbing.
+            Search alg = new HillClimbingSearch();
 
-        // 4. Posem l'agent a treballar perquè busqui la millor combinació de rescats.
-        System.out.println("Iniciant Cerca Local (Simulated Annealing)...");
-        SearchAgent agent = new SearchAgent(p, alg);
+            // 5. Posem l'agent a treballar perquè busqui la millor combinació de rescats.
+            System.out.println("Iniciant Cerca Local (Hill Climbing)...");
+            SearchAgent agent = new SearchAgent(p, alg);
 
-        // 5. Un cop ha acabat, mostrem quantes iteracions i passes ha fet per trobar la solució.
-        System.out.println("--- ESTADÍSTIQUES DE LA CERCA ---");
-        printInstrumentation(agent.getInstrumentation());
+            // 6. Un cop ha acabat, mostrem quantes iteracions i passes ha fet per trobar la solució.
+            System.out.println("--- ESTADÍSTIQUES DE LA CERCA ---");
+            printInstrumentation(agent.getInstrumentation());
+        }
+        if (tipusCerca == 2) {
+            // 3. Creem el problema per a la llibreria d'AIMA. Li passem el nostre tauler,
+            // la funció que genera els moviments (ara mateix SA), el test de meta i com calculem el temps.
+            Problem p = new Problem(
+                    board,
+                    new ProbSuccessorFunctionSA(), // Funció que triarà un moviment a l'atzar
+                    new ProbGoalTest(),
+                    new ProbHeuristicFunction()
+            );
+
+            // 4. Preparem l'algorisme de Simulated Annealing (Recuita Simulada).
+            // Aquests números són els paràmetres que anirem canviant per fer els experiments de la pràctica.
+            Search alg = new SimulatedAnnealingSearch(10000, 100, 5, 0.001);
+
+            // 5. Posem l'agent a treballar perquè busqui la millor combinació de rescats.
+            System.out.println("Iniciant Cerca Local (Simulated Annealing)...");
+            SearchAgent agent = new SearchAgent(p, alg);
+
+            // 6. Un cop ha acabat, mostrem quantes iteracions i passes ha fet per trobar la solució.
+            System.out.println("--- ESTADÍSTIQUES DE LA CERCA ---");
+            printInstrumentation(agent.getInstrumentation());
+        }
+    }
+
+    private static int llegirTipusCerca() {
+        Scanner readInput = new Scanner(System.in);
+        System.out.println("Indica el tipus de cerca a utilitzar:");
+        System.out.println("    1. Hill Climbing");
+        System.out.println("    2. Simulated Annealing");
+        int tipusCerca = readInput.nextInt();
+        while (tipusCerca != 1 && tipusCerca !=2) {
+           System.out.println("Insereix un valor vàlid (1 o 2):");
+           tipusCerca = readInput.nextInt();
+        }
+        readInput.close();
+        return tipusCerca;
     }
 
     // Aquesta petita funció l'hem afegit per poder veure les dades ocultes (com els nodes expandits) de l'AIMA.
