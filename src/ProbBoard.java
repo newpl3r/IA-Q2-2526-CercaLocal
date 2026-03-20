@@ -161,6 +161,9 @@ public class ProbBoard {
      * el valor: "Distància a grup del seu Centre" x "Nombre de viatges"
      * La idea és que no hi hagi un helicòpter que faci 14 viatges quan un altre fa 2,
      * encara que estigui més aprop.
+     * NOTA: Quan sumem els temps dels helicòpters no tenim en compte que van en paral·lel
+     * Aquesta estratègia només serveix per minimitzar la penalització dels grups de prioritat 1.
+     * Per tant, només té sentit aparellar-la amb l'heurístic 2.
      */
     private void generarSolucioAvariciosa2() {
         int helisPerCentre = numHelicopters / totsElsCentres.size();
