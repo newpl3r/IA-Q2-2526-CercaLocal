@@ -106,8 +106,8 @@ public class Main {
         
         int iteracions = 100000; 
         int steps = 100;
-        int[] valorsK = {1, 5, 25, 125};
-        double[] valorsLambda = {0.1, 0.01, 0.001, 0.0001};
+        int[] valorsK = {3, 4, 5};
+        double[] valorsLambda = {0.00005, 0.00002, 0.00001};
 
         System.out.printf("%-5s | %-8s | %-12s | %-12s | %-12s | %-12s | %-12s\n", "K", "Lambda", "T. Mig(ms)", "T. Min(ms)", "T. Max(ms)", "Nodes Migs", "Cost Mig");
         System.out.println("---------------------------------------------------------------------------------------------");
@@ -143,7 +143,7 @@ public class Main {
                     costTotal += heuristic.getHeuristicValue(finalState);
                 }
                 
-                System.out.printf("%-5d | %-8.4f | %-12d | %-12d | %-12d | %-12.1f | %-12.2f\n", 
+                System.out.printf("%-5d | %-8.5f | %-12d | %-12d | %-12d | %-12.1f | %-12.2f\n", 
                         k, lambda, (tempsTotal / 10), tempsMin, tempsMax, (nodesTotals / 10), (costTotal / 10));
             }
         }
