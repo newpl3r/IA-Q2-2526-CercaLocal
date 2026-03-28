@@ -152,8 +152,8 @@ public class Main {
     // --- EXPERIMENT 4: Escalabilitat ---
     private static void runExperimento4() throws Exception {
         System.out.println("\n--- INICIANT EXPERIMENT 4 ---");
-        int millorK = 125; 
-        double millorLambda = 0.0001; 
+        int millorK = 4; 
+        double millorLambda = 0.00002; 
 
         System.out.printf("%-7s | %-5s | %-9s | %-9s | %-9s | %-9s | %-9s | %-9s | %-10s | %-10s\n", 
                 "Centres", "Grups", "Mig HC", "Min HC", "Max HC", "Mig SA", "Min SA", "Max SA", "Cost HC", "Cost SA");

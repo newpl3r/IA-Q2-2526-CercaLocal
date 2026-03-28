@@ -13,7 +13,7 @@ public class ProbSuccessorFunction implements SuccessorFunction {
 
         // Mostrem l'heuristic per pantalla cada cop que la cerca demana generar nous succesors
         ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
-        System.out.println("Heuristic: " + heuristic.getHeuristicValue(board));
+        //System.out.println("Heuristic: " + heuristic.getHeuristicValue(board));
 
         // --- EXECUTANT L'OPERADOR 1 (MOURE) ---
         // Aquí li diem a la IA: "ullera tots els racons". Fem bucles per explorar absolutament
