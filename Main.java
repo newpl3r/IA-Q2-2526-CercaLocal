@@ -150,7 +150,7 @@ public class Main {
     }
 
     // --- EXPERIMENT 4: Escalabilitat ---
-    private static void runExperimento4() throws Exception {
+    /*private static void runExperimento4() throws Exception {
         System.out.println("\n--- INICIANT EXPERIMENT 4 ---");
         int millorK = 4; 
         double millorLambda = 0.00002; 
@@ -205,6 +205,46 @@ public class Main {
                     numCentres, numGrups, (tempsTotalHC / 10), tempsMinHC, tempsMaxHC, 
                     (tempsTotalSA / 10), tempsMinSA, tempsMaxSA, (costTotalHC / 10), (costTotalSA / 10));
         }
+    }*/
+
+    // --- EXPERIMENT 4: Escalabilitat (VERSIÓ EXPRÉS NOMÉS SA 25/500) ---
+    private static void runExperimento4() throws Exception {
+        System.out.println("\n--- RECUPERANT DADES DEL SA PER A 25 CENTRES I 500 GRUPS ---");
+        int millorK = 4; 
+        double millorLambda = 0.00002; 
+
+        System.out.printf("%-7s | %-5s | %-9s | %-9s | %-9s | %-10s\n", 
+                "Centres", "Grups", "Mig SA", "Min SA", "Max SA", "Cost SA");
+        System.out.println("------------------------------------------------------------------");
+
+        ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
+
+        int numCentres = 25;
+        int numGrups = 500;
+
+        long tempsTotalSA = 0;
+        double costTotalSA = 0;
+
+        long tempsMinSA = Long.MAX_VALUE, tempsMaxSA = Long.MIN_VALUE;
+
+        for (int i = 0; i < 10; i++) {
+            // Execució Simulated Annealing NOMÉS
+            ProbBoard boardSA = new ProbBoard(numCentres, numGrups, 1, LLAVORS[i]);
+            Problem pSA = new Problem(boardSA, new ProbSuccessorFunctionSA(), new ProbGoalTest(), heuristic);
+            Search algSA = new SimulatedAnnealingSearch(100000, 100, millorK, millorLambda);
+            long startSA = System.currentTimeMillis();
+            new SearchAgent(pSA, algSA);
+            
+            long tempsActualSA = System.currentTimeMillis() - startSA;
+            tempsTotalSA += tempsActualSA;
+            if (tempsActualSA < tempsMinSA) tempsMinSA = tempsActualSA;
+            if (tempsActualSA > tempsMaxSA) tempsMaxSA = tempsActualSA;
+            
+            costTotalSA += heuristic.getHeuristicValue(algSA.getGoalState());
+        }
+
+        System.out.printf("%-7d | %-5d | %-9d | %-9d | %-9d | %-10.2f\n", 
+                numCentres, numGrups, (tempsTotalSA / 10), tempsMinSA, tempsMaxSA, (costTotalSA / 10));
     }
 
         // Aquesta petita funció l'hem afegit per poder veure les dades ocultes (com els nodes expandits) de l'AIMA.
