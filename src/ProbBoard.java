@@ -37,7 +37,6 @@ public class ProbBoard {
         // Cridem a una de les nostres estratègies inicials per pujar tota aquesta gent als helicòpters.
         generarSolucioAleatoria();
         //generarSolucioAvariciosa(); // Si volem provar l'altra estratègia, comentem la de dalt i descomentem aquesta.
-        //generarSolucioAvariciosa2();
     }
 
     /**
@@ -156,122 +155,6 @@ public class ProbBoard {
         }
     }
 
-    /**
-     * ESTRATÈGIA 3: Solució Avariciosa 2. Busquem sempre l'helicòpter que minimitzi
-     * el valor: "Distància a grup del seu Centre" x "Nombre de viatges"
-     * La idea és que no hi hagi un helicòpter que faci 14 viatges quan un altre fa 2,
-     * encara que estigui més aprop.
-     * NOTA: Quan sumem els temps dels helicòpters no tenim en compte que van en paral·lel
-     * Aquesta estratègia només serveix per minimitzar la penalització dels grups de prioritat 1.
-     * Per tant, només té sentit aparellar-la amb l'heurístic 2.
-     */
-    private void generarSolucioAvariciosa2() {
-        int helisPerCentre = numHelicopters / totsElsCentres.size();
-        java.util.Random rand = new java.util.Random();
-
-        for (int idGrup = 0; idGrup < totsElsGrups.size(); idGrup++) {
-
-            Grupo grup = totsElsGrups.get(idGrup);
-            int personesDelGrup = grup.getNPersonas();
-
-            // PAS 1: Cercarem en tots els centres quin helicopter minimitza
-            // el valor -> Distancia x Num. Viatges.
-
-            int idHeliMinim = -1;
-            double valorMinim = Double.MAX_VALUE;
-
-            for (int idCentre = 0; idCentre < totsElsCentres.size(); idCentre++) {
-                Centro centre = totsElsCentres.get(idCentre);
-
-                // PAS 1.1: Trobem la distància.
-                double dx = grup.getCoordX() - centre.getCoordX();
-                double dy = grup.getCoordY() - centre.getCoordY();
-                double distancia = Math.sqrt(dx * dx + dy * dy);
-
-                // PAS 1.2: Trobem l'helicopter amb el mínim nombre de viatges del centre actual.
-                int heliInicial = (idCentre*helisPerCentre);
-                int idHeliActual = -1;
-                int numViatgesActual = Integer.MAX_VALUE;
-
-                for (int idHeli = heliInicial; idHeli < heliInicial+helisPerCentre; idHeli++) {
-                    int numViatgesHeli = assignacioHelicopters.get(idHeli).size();
-                    if (numViatgesActual > numViatgesHeli) {
-                        numViatgesActual = numViatgesHeli;
-                        idHeliActual = idHeli;
-                    }
-                }
-
-                // PAS 1.3: Multipliquem els dos valors
-                double valorActual = distancia * numViatgesActual;
-
-                // PAS 1.4: Comprovem si es menor que el de l'helicopter ja guardat
-                // Si ho és, actualitzem els valors
-                if (valorMinim > valorActual) {
-                    idHeliMinim = idHeliActual;
-                    valorMinim = valorActual;
-                }
-                // En cas d'empat, escollim l'helicòpter amb el menor
-                // nombre de persones en l'últim viatge
-                else if (valorMinim == valorActual) {
-
-                    // 1. Calcul de persones per l'helicopter minim
-                    ArrayList<ArrayList<Integer>> viatgesHeli = assignacioHelicopters.get(idHeliMinim);
-                    if (viatgesHeli.isEmpty()) {
-                        viatgesHeli.add(new ArrayList<>());
-                    }
-                    ArrayList<Integer> ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
-
-                    int personesMinim = 0;
-                    for (int idGrupViatge : ultimViatge) {
-                        personesMinim += totsElsGrups.get(idGrupViatge).getNPersonas();
-                    }
-
-                    // 2. Calcul de persones per l'helicopter d'aquesta iteracio
-                    viatgesHeli = assignacioHelicopters.get(idHeliActual);
-                    if (viatgesHeli.isEmpty()) {
-                        viatgesHeli.add(new ArrayList<>());
-                    }
-                    ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
-
-                    int personesActual = 0;
-                    for (int idGrupViatge : ultimViatge) {
-                        personesActual += totsElsGrups.get(idGrupViatge).getNPersonas();
-                    }
-
-                    // 3. Escollim l'helicopter amb menys persones en l'ultim viatge
-                    if (personesMinim > personesActual) {
-                        idHeliMinim = idHeliActual;
-                        valorMinim = valorActual;
-                    }
-                }
-            }
-
-            // PAS 2: Pugem el grup a l'helicòpter escollit, vigilant de no superar el pes màxim.
-
-            ArrayList<ArrayList<Integer>> viatgesHeli = assignacioHelicopters.get(idHeliMinim);
-
-            if (viatgesHeli.isEmpty()) {
-                viatgesHeli.add(new ArrayList<>());
-            }
-
-            ArrayList<Integer> ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
-
-            int personesAlViatge = 0;
-            for (int idGrupViatge : ultimViatge) {
-                personesAlViatge += totsElsGrups.get(idGrupViatge).getNPersonas();
-            }
-
-            if (ultimViatge.size() < 3 && (personesAlViatge + personesDelGrup) <= 15) {
-                ultimViatge.add(idGrup);
-            }
-            else {
-                ArrayList<Integer> nouViatge = new ArrayList<>();
-                nouViatge.add(idGrup);
-                viatgesHeli.add(nouViatge);
-            }
-        }
-    }
-
     // --- MÈTODES OBLIGATORIS PER A LA LLIBRERIA D'AIMA ---
 
     /**
@@ -349,64 +232,84 @@ public class ProbBoard {
      * HEURÍSTICA 2: El mateix que la primera, però castiguem l'algorisme si fa esperar massa als ferits.
      */
     public double heuristic2() {
-        double tempsTotalFlota = 0.0;
-        double penalitzacioFerits = 0.0; // Aquesta és la clau de la nova heurística.
-
         int helisPerCentre = numHelicopters / totsElsCentres.size();
-
+        double tempsUltimP1 = 0.0;
+        // Repassem el llibre de ruta de cada helicòpter.
         for (int i = 0; i < assignacioHelicopters.size(); i++) {
+            // Així deduïm des de quina base surt l'helicòpter que estem mirant.
             int idCentre = i / helisPerCentre;
             Centro centre = totsElsCentres.get(idCentre);
 
-            double tempsAquestHeli = 0.0; // Ens interessa saber el temps individual perquè si rescata algú al minut 500, el castigarem.
+            double coordX_Centre = centre.getCoordX();
+            double coordY_Centre = centre.getCoordY();
+
             ArrayList<ArrayList<Integer>> viatges = assignacioHelicopters.get(i);
 
+            double tempsDesdeInici = 0.0;
+            double tempsUltimP1Heli = 0.0;
+            // Per cada viatge d'aquest helicòpter:
             for (int v = 0; v < viatges.size(); v++) {
                 ArrayList<Integer> viatge = viatges.get(v);
                 if (viatge.isEmpty()) continue;
 
-                if (v > 0) tempsAquestHeli += 10.0; // Descans a la base.
+                // Si no és el primer vol del dia, triga 10 minuts més a descarregar a la base.
+                if (v > 0) tempsDesdeInici += 10.0;
 
-                double posActualX = centre.getCoordX();
-                double posActualY = centre.getCoordY();
+                // El pilot arrenca el vol des de la base (el centre).
+                double posActualX = coordX_Centre;
+                double posActualY = coordY_Centre;
 
+                // Visitem els grups d'aquest viatge un per un.
+                boolean P1Present = false;
                 for (int g = 0; g < viatge.size(); g++) {
                     int idGrup = viatge.get(g);
                     Grupo grup = totsElsGrups.get(idGrup);
 
-                    // Temps de vol
+                    // A) Càlcul del vol: Distància entre on estem ara i el pròxim grup.
                     double dx = grup.getCoordX() - posActualX;
                     double dy = grup.getCoordY() - posActualY;
                     double distancia = Math.sqrt(dx * dx + dy * dy);
-                    tempsAquestHeli += (distancia / 100.0) * 60.0;
 
+                    // L'enunciat diu que vola a 100km/h. Ho passem directament a minuts de vol.
+                    tempsDesdeInici += (distancia / 100.0) * 60.0;
+
+                    // B) Càlcul de càrrega: Pugem la gent a bord.
                     int persones = grup.getNPersonas();
-                    if (grup.getPrioridad() == 1) { // FERITS DETECTATS!
-                        tempsAquestHeli += (persones * 2.0);
+                    int prioritat = grup.getPrioridad();
 
-                        // TRUC DE L'HEURÍSTICA: Multipliquem el minut en el que els hem rescatat per 50.
-                        // Si els rescatem aviat (minut 10), sumem 500 de penalització.
-                        // Si els rescatem tardíssim (minut 500), sumem 25000! Així la IA aprendrà a no fer-ho.
-                        penalitzacioFerits += (tempsAquestHeli * 50.0);
-                    } else { // SANS (no els penalitzem)
-                        tempsAquestHeli += (persones * 1.0);
+                    if (prioritat == 1) {
+                        tempsDesdeInici += (persones * 2.0); // Prioritat 1 vol dir que tenen ferits (2 min per pujar-los)
+                        P1Present = true;
+                    } else {
+                        tempsDesdeInici += (persones * 1.0); // Prioritat 2 vol dir que estan sans (1 min ràpid)
                     }
 
+                    // Actualitzem la posició perquè l'helicòpter ja està flotant a sobre del grup.
                     posActualX = grup.getCoordX();
                     posActualY = grup.getCoordY();
                 }
 
-                // Tornada a la base.
-                double dxTornada = centre.getCoordX() - posActualX;
-                double dyTornada = centre.getCoordY() - posActualY;
-                double distanciaTornada = Math.sqrt(dxTornada * dxTornada + dyTornada * dyTornada);
-                tempsAquestHeli += (distanciaTornada / 100.0) * 60.0;
-            }
-            tempsTotalFlota += tempsAquestHeli;
-        }
+                // C) Tornada a casa: Distància des de l'últim grup del viatge fins a la base per descarregar.
+                double dxTornada = coordX_Centre - posActualX;
+                double dyTornada = coordY_Centre - posActualY;
+                double distanciaTornada = Math.sqrt(
+                    dxTornada * dxTornada + dyTornada * dyTornada
+                );
 
-        // Li tornem a l'AIMA el temps real + el pes gegant de la penalització perquè valori si la combinació és bona.
-        return tempsTotalFlota + penalitzacioFerits;
+                tempsDesdeInici += (distanciaTornada / 100.0) * 60.0;
+                if (P1Present) tempsUltimP1Heli = tempsDesdeInici;
+            }
+            if (tempsUltimP1 < tempsUltimP1Heli) tempsUltimP1 = tempsUltimP1Heli;
+        }
+        return tempsUltimP1;
+    }
+
+    public double sumaHeuristics() {
+        return heuristic() + heuristic2();
+    }
+
+    public double ponderacioHeuristics() {
+        return heuristic() + 2*heuristic2();
     }
 
     public boolean is_goal() {
