@@ -109,17 +109,20 @@ public class Main {
         int[] valorsK = {1, 5, 25, 125};
         double[] valorsLambda = {0.1, 0.01, 0.001, 0.0001};
 
-        System.out.printf("%-5s | %-8s | %-12s | %-12s\n", "K", "Lambda", "Temps Mig(ms)", "Nodes Migs");
-        System.out.println("-----------------------------------------------------");
+        System.out.printf("%-5s | %-8s | %-12s | %-12s | %-12s\n", "K", "Lambda", "Temps Mig(ms)", "Nodes Migs", "Cost Mig");
+        System.out.println("-------------------------------------------------------------------");
+
+        ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
 
         for (int k : valorsK) {
             for (double lambda : valorsLambda) {
                 long tempsTotal = 0;
                 double nodesTotals = 0;
+                double costTotal = 0; // Guardem el cost final
 
                 for (int i = 0; i < 10; i++) { // 10 repeticions
                     ProbBoard board = new ProbBoard(5, 100, 1, LLAVORS[i]);
-                    Problem p = new Problem(board, new ProbSuccessorFunctionSA(), new ProbGoalTest(), new ProbHeuristicFunction());
+                    Problem p = new Problem(board, new ProbSuccessorFunctionSA(), new ProbGoalTest(), heuristic);
                     Search alg = new SimulatedAnnealingSearch(iteracions, steps, k, lambda);
                     
                     long startTime = System.currentTimeMillis();
@@ -127,11 +130,14 @@ public class Main {
                     long endTime = System.currentTimeMillis();
                     
                     tempsTotal += (endTime - startTime);
-                    // Agafem els nodes expandits com a mesura d'esforç
                     nodesTotals += Double.parseDouble(agent.getInstrumentation().getProperty("nodesExpanded", "0"));
+                    
+                    // Extraiem el cost final!
+                    Object finalState = alg.getGoalState();
+                    costTotal += heuristic.getHeuristicValue(finalState);
                 }
                 
-                System.out.printf("%-5d | %-8.4f | %-12d | %-12.1f\n", k, lambda, (tempsTotal / 10), (nodesTotals / 10));
+                System.out.printf("%-5d | %-8.4f | %-12d | %-12.1f | %-12.2f\n", k, lambda, (tempsTotal / 10), (nodesTotals / 10), (costTotal / 10));
             }
         }
     }
@@ -143,36 +149,41 @@ public class Main {
         int millorK = 125; 
         double millorLambda = 0.0001; 
 
-        System.out.printf("%-7s | %-8s | %-15s | %-15s\n", "Centres", "Grups", "Temps HC (ms)", "Temps SA (ms)");
-        System.out.println("--------------------------------------------------------------");
+        System.out.printf("%-7s | %-7s | %-13s | %-13s | %-12s | %-12s\n", "Centres", "Grups", "Temps HC(ms)", "Temps SA(ms)", "Cost HC", "Cost SA");
+        System.out.println("--------------------------------------------------------------------------------");
+
+        ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
 
         // Proporció 5:100. Multiplicador d'1 a 5 (de 5/100 fins a 25/500)
         for (int mult = 1; mult <= 5; mult++) {
             int numCentres = 5 * mult;
             int numGrups = 100 * mult;
 
-            long tempsTotalHC = 0;
-            long tempsTotalSA = 0;
+            long tempsTotalHC = 0, tempsTotalSA = 0;
+            double costTotalHC = 0, costTotalSA = 0;
 
             for (int i = 0; i < 10; i++) {
                 // Execució Hill Climbing
                 ProbBoard boardHC = new ProbBoard(numCentres, numGrups, 1, LLAVORS[i]);
-                Problem pHC = new Problem(boardHC, new ProbSuccessorFunction(), new ProbGoalTest(), new ProbHeuristicFunction());
+                Problem pHC = new Problem(boardHC, new ProbSuccessorFunction(), new ProbGoalTest(), heuristic);
                 Search algHC = new HillClimbingSearch();
                 long startHC = System.currentTimeMillis();
                 new SearchAgent(pHC, algHC);
                 tempsTotalHC += (System.currentTimeMillis() - startHC);
+                costTotalHC += heuristic.getHeuristicValue(algHC.getGoalState());
 
                 // Execució Simulated Annealing
                 ProbBoard boardSA = new ProbBoard(numCentres, numGrups, 1, LLAVORS[i]);
-                Problem pSA = new Problem(boardSA, new ProbSuccessorFunctionSA(), new ProbGoalTest(), new ProbHeuristicFunction());
+                Problem pSA = new Problem(boardSA, new ProbSuccessorFunctionSA(), new ProbGoalTest(), heuristic);
                 Search algSA = new SimulatedAnnealingSearch(100000, 100, millorK, millorLambda);
                 long startSA = System.currentTimeMillis();
                 new SearchAgent(pSA, algSA);
                 tempsTotalSA += (System.currentTimeMillis() - startSA);
+                costTotalSA += heuristic.getHeuristicValue(algSA.getGoalState());
             }
 
-            System.out.printf("%-7d | %-8d | %-15d | %-15d\n", numCentres, numGrups, (tempsTotalHC / 10), (tempsTotalSA / 10));
+            System.out.printf("%-7d | %-7d | %-13d | %-13d | %-12.2f | %-12.2f\n", 
+                    numCentres, numGrups, (tempsTotalHC / 10), (tempsTotalSA / 10), (costTotalHC / 10), (costTotalSA / 10));
         }
     }
 
