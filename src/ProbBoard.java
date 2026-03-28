@@ -35,8 +35,8 @@ public class ProbBoard {
         }
 
         // Cridem a una de les nostres estratègies inicials per pujar tota aquesta gent als helicòpters.
-        generarSolucioAleatoria();
-        //generarSolucioAvariciosa(); // Si volem provar l'altra estratègia, comentem la de dalt i descomentem aquesta.
+        //generarSolucioAleatoria();
+        generarSolucioAvariciosa(); // Si volem provar l'altra estratègia, comentem la de dalt i descomentem aquesta.
         //generarSolucioAvariciosa2();
     }
 

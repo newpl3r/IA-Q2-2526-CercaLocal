@@ -104,13 +104,13 @@ public class Main {
         System.out.println("\n--- INICIANT EXPERIMENT 3 ---");
         System.out.println("Buscant els millors paràmetres (k, lambda) per a 5 centres i 100 grups...");
         
-        int iteracions = 100000; // Posem un num alt perquè convergeixi bé
+        int iteracions = 100000; 
         int steps = 100;
         int[] valorsK = {1, 5, 25, 125};
         double[] valorsLambda = {0.1, 0.01, 0.001, 0.0001};
 
-        System.out.printf("%-5s | %-8s | %-12s | %-12s | %-12s\n", "K", "Lambda", "Temps Mig(ms)", "Nodes Migs", "Cost Mig");
-        System.out.println("-------------------------------------------------------------------");
+        System.out.printf("%-5s | %-8s | %-12s | %-12s | %-12s | %-12s | %-12s\n", "K", "Lambda", "T. Mig(ms)", "T. Min(ms)", "T. Max(ms)", "Nodes Migs", "Cost Mig");
+        System.out.println("---------------------------------------------------------------------------------------------");
 
         ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
 
@@ -118,9 +118,12 @@ public class Main {
             for (double lambda : valorsLambda) {
                 long tempsTotal = 0;
                 double nodesTotals = 0;
-                double costTotal = 0; // Guardem el cost final
+                double costTotal = 0; 
 
-                for (int i = 0; i < 10; i++) { // 10 repeticions
+                long tempsMin = Long.MAX_VALUE;
+                long tempsMax = Long.MIN_VALUE;
+
+                for (int i = 0; i < 10; i++) { 
                     ProbBoard board = new ProbBoard(5, 100, 1, LLAVORS[i]);
                     Problem p = new Problem(board, new ProbSuccessorFunctionSA(), new ProbGoalTest(), heuristic);
                     Search alg = new SimulatedAnnealingSearch(iteracions, steps, k, lambda);
@@ -129,15 +132,19 @@ public class Main {
                     SearchAgent agent = new SearchAgent(p, alg);
                     long endTime = System.currentTimeMillis();
                     
-                    tempsTotal += (endTime - startTime);
-                    nodesTotals += Double.parseDouble(agent.getInstrumentation().getProperty("nodesExpanded", "0"));
+                    long tempsActual = endTime - startTime;
+                    tempsTotal += tempsActual;
                     
-                    // Extraiem el cost final!
+                    if (tempsActual < tempsMin) tempsMin = tempsActual;
+                    if (tempsActual > tempsMax) tempsMax = tempsActual;
+
+                    nodesTotals += Double.parseDouble(agent.getInstrumentation().getProperty("nodesExpanded", "0"));
                     Object finalState = alg.getGoalState();
                     costTotal += heuristic.getHeuristicValue(finalState);
                 }
                 
-                System.out.printf("%-5d | %-8.4f | %-12d | %-12.1f | %-12.2f\n", k, lambda, (tempsTotal / 10), (nodesTotals / 10), (costTotal / 10));
+                System.out.printf("%-5d | %-8.4f | %-12d | %-12d | %-12d | %-12.1f | %-12.2f\n", 
+                        k, lambda, (tempsTotal / 10), tempsMin, tempsMax, (nodesTotals / 10), (costTotal / 10));
             }
         }
     }
@@ -145,22 +152,24 @@ public class Main {
     // --- EXPERIMENT 4: Escalabilitat ---
     private static void runExperimento4() throws Exception {
         System.out.println("\n--- INICIANT EXPERIMENT 4 ---");
-        // Substitueix aquests valors pels millors que hagis trobat a l'Experiment 3!
         int millorK = 125; 
         double millorLambda = 0.0001; 
 
-        System.out.printf("%-7s | %-7s | %-13s | %-13s | %-12s | %-12s\n", "Centres", "Grups", "Temps HC(ms)", "Temps SA(ms)", "Cost HC", "Cost SA");
-        System.out.println("--------------------------------------------------------------------------------");
+        System.out.printf("%-7s | %-5s | %-9s | %-9s | %-9s | %-9s | %-9s | %-9s | %-10s | %-10s\n", 
+                "Centres", "Grups", "Mig HC", "Min HC", "Max HC", "Mig SA", "Min SA", "Max SA", "Cost HC", "Cost SA");
+        System.out.println("-------------------------------------------------------------------------------------------------------");
 
         ProbHeuristicFunction heuristic = new ProbHeuristicFunction();
 
-        // Proporció 5:100. Multiplicador d'1 a 5 (de 5/100 fins a 25/500)
         for (int mult = 1; mult <= 5; mult++) {
             int numCentres = 5 * mult;
             int numGrups = 100 * mult;
 
             long tempsTotalHC = 0, tempsTotalSA = 0;
             double costTotalHC = 0, costTotalSA = 0;
+
+            long tempsMinHC = Long.MAX_VALUE, tempsMaxHC = Long.MIN_VALUE;
+            long tempsMinSA = Long.MAX_VALUE, tempsMaxSA = Long.MIN_VALUE;
 
             for (int i = 0; i < 10; i++) {
                 // Execució Hill Climbing
@@ -169,7 +178,12 @@ public class Main {
                 Search algHC = new HillClimbingSearch();
                 long startHC = System.currentTimeMillis();
                 new SearchAgent(pHC, algHC);
-                tempsTotalHC += (System.currentTimeMillis() - startHC);
+                
+                long tempsActualHC = System.currentTimeMillis() - startHC;
+                tempsTotalHC += tempsActualHC;
+                if (tempsActualHC < tempsMinHC) tempsMinHC = tempsActualHC;
+                if (tempsActualHC > tempsMaxHC) tempsMaxHC = tempsActualHC;
+                
                 costTotalHC += heuristic.getHeuristicValue(algHC.getGoalState());
 
                 // Execució Simulated Annealing
@@ -178,12 +192,18 @@ public class Main {
                 Search algSA = new SimulatedAnnealingSearch(100000, 100, millorK, millorLambda);
                 long startSA = System.currentTimeMillis();
                 new SearchAgent(pSA, algSA);
-                tempsTotalSA += (System.currentTimeMillis() - startSA);
+                
+                long tempsActualSA = System.currentTimeMillis() - startSA;
+                tempsTotalSA += tempsActualSA;
+                if (tempsActualSA < tempsMinSA) tempsMinSA = tempsActualSA;
+                if (tempsActualSA > tempsMaxSA) tempsMaxSA = tempsActualSA;
+                
                 costTotalSA += heuristic.getHeuristicValue(algSA.getGoalState());
             }
 
-            System.out.printf("%-7d | %-7d | %-13d | %-13d | %-12.2f | %-12.2f\n", 
-                    numCentres, numGrups, (tempsTotalHC / 10), (tempsTotalSA / 10), (costTotalHC / 10), (costTotalSA / 10));
+            System.out.printf("%-7d | %-5d | %-9d | %-9d | %-9d | %-9d | %-9d | %-9d | %-10.2f | %-10.2f\n", 
+                    numCentres, numGrups, (tempsTotalHC / 10), tempsMinHC, tempsMaxHC, 
+                    (tempsTotalSA / 10), tempsMinSA, tempsMaxSA, (costTotalHC / 10), (costTotalSA / 10));
         }
     }
 
