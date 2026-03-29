@@ -276,7 +276,9 @@ public class ProbBoard {
     }
 
     public double ponderacioHeuristics() {
-        return heuristic() + 2 * heuristic2();
+        // El valor de la ponderació pot ser canviat. El valor 64 és òptim
+        // per minimitzar al màxim el temps de rescat dels grups de prioritat 1
+        return heuristic() + 64 * heuristic2();
     }
 
     /**
