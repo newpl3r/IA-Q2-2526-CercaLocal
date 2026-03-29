@@ -2,50 +2,55 @@ package src;
 
 import IA.Desastres.*;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
 
+/**
+ * Representació de l'estat del problema.
+ * Gestiona les dades estàtiques de l'escenari i l'estructura de dades dinàmica
+ * de l'assignació de grups a les rutes dels helicòpters.
+ */
 public class ProbBoard {
 
     // --- DADES ESTÀTIQUES ---
-    // Ho posem static perquè l'escenari (on són els grups i els centres) és igual per a tots els estats,
-    // així ens estalviem duplicar aquestes dades a la memòria cada cop que provem un moviment nou.
+    // S'emmagatzemen com a variables de classe (static) per compartir la instància
+    // entre tots els estats generats i evitar redundància espacial a la memòria.
     public static Grupos totsElsGrups;
     public static Centros totsElsCentres;
     public static int numHelicopters;
 
     // --- DADES DINÀMIQUES ---
-    // Aquesta és la nostra estructura de dades principal. És una llista de llistes de llistes.
-    // Nivell 1: Tenim cada helicòpter. -> Nivell 2: Els viatges que fa l'helicòpter. -> Nivell 3: Els IDs dels grups que pugen a l'helicòpter en aquell viatge.
+    // Llista niuada per representar l'estat factible:
+    // Helicòpter -> Llista de Viatges -> Llista d'IDs de Grups assignats a aquell viatge.
     public ArrayList<ArrayList<ArrayList<Integer>>> assignacioHelicopters;
 
     /**
-     * CONSTRUCTOR 1: El fem servir per crear l'escenari per primera vegada al Main.
+     * Constructor inicial: Genera el problema base utilitzant la llibreria IA.Desastres.
+     * @param numCentres Nombre de centres de comandament.
+     * @param numGrups Nombre de grups de persones a rescatar.
+     * @param nHelicoptersPerCentre Nombre d'helicòpters disponibles a cada centre.
+     * @param seed Llavor per garantir la reproductibilitat de l'experiment.
      */
     public ProbBoard(int numCentres, int numGrups, int nHelicoptersPerCentre, int seed) {
-        // Generem el mapa amb la llibreria de la pràctica.
         totsElsCentres = new Centros(numCentres, nHelicoptersPerCentre, seed);
         totsElsGrups = new Grupos(numGrups, seed);
         numHelicopters = numCentres * nHelicoptersPerCentre;
 
-        // Preparem la nostra llista d'helicòpters totalment buida.
         assignacioHelicopters = new ArrayList<>();
         for (int i = 0; i < numHelicopters; i++) {
             assignacioHelicopters.add(new ArrayList<>());
         }
 
-        // Cridem a una de les nostres estratègies inicials per pujar tota aquesta gent als helicòpters.
+        // Inicialització de l'estat factible inicial (canviar estratègia segons l'experiment).
         generarSolucioAleatoria();
-        //generarSolucioAvariciosa(); // Si volem provar l'altra estratègia, comentem la de dalt i descomentem aquesta.
+        // generarSolucioAvariciosa();
     }
 
     /**
-     * CONSTRUCTOR 2: Molt important! El necessitem per clonar l'estat cada cop que simulem moure un grup,
-     * així no matxaquem l'estat original quan provem diferents combinacions.
+     * Constructor còpia: Realitza una clonació profunda (deep copy) de l'estructura dinàmica.
+     * Fonamental per avaluar successors sense mutar l'estat origen.
+     * @param estatAnterior L'estat des del qual es vol derivar el nou estat.
      */
     public ProbBoard(ProbBoard estatAnterior) {
         this.assignacioHelicopters = new ArrayList<>();
-        // Fem una còpia exacta (deep copy) de l'assignació de l'estat anterior perquè siguin independents.
         for (ArrayList<ArrayList<Integer>> viatgesHeli : estatAnterior.assignacioHelicopters) {
             ArrayList<ArrayList<Integer>> viatgesClonats = new ArrayList<>();
             for (ArrayList<Integer> viatge : viatgesHeli) {
@@ -56,26 +61,21 @@ public class ProbBoard {
     }
 
     /**
-     * ESTRATÈGIA 1: Repartim la gent als helicòpters llançant un dau, completament a l'atzar.
+     * Estratègia d'inicialització (Baseline): Genera un estat inicial assignant de manera
+     * aleatòria cada grup a un helicòpter, respectant estrictament les restriccions de capacitat.
      */
     private void generarSolucioAleatoria() {
         java.util.Random rand = new java.util.Random();
 
-        // Anem mirant un per un tots els grups que tenim esperant ser rescatats.
         for (int idGrup = 0; idGrup < totsElsGrups.size(); idGrup++) {
-
             int personesDelGrup = totsElsGrups.get(idGrup).getNPersonas();
-
-            // Triem a quin helicòpter l'assignem a l'atzar.
             int idHeli = rand.nextInt(numHelicopters);
-            ArrayList<ArrayList<Integer>> viatgesHeli = assignacioHelicopters.get(idHeli);
 
-            // Si el pobre pilot encara no té cap viatge assignat, li creem el primer.
+            ArrayList<ArrayList<Integer>> viatgesHeli = assignacioHelicopters.get(idHeli);
             if (viatgesHeli.isEmpty()) {
                 viatgesHeli.add(new ArrayList<>());
             }
 
-            // Mirem què està passant a l'últim viatge d'aquest helicòpter.
             ArrayList<Integer> ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
 
             int personesAlViatge = 0;
@@ -83,12 +83,9 @@ public class ProbBoard {
                 personesAlViatge += totsElsGrups.get(idGrupViatge).getNPersonas();
             }
 
-            // Normes del professor: a l'helicòpter hi caben 15 persones i màxim 3 grups. Comprovem si hi ha lloc.
             if (ultimViatge.size() < 3 && (personesAlViatge + personesDelGrup) <= 15) {
-                // Hi cap perfectament! Que pugin en aquest viatge.
                 ultimViatge.add(idGrup);
             } else {
-                // Ostres, l'helicòpter està ple. L'obliguem a tornar a la base i li assignem un viatge nou per aquest grup.
                 ArrayList<Integer> nouViatge = new ArrayList<>();
                 nouViatge.add(idGrup);
                 viatgesHeli.add(nouViatge);
@@ -97,41 +94,33 @@ public class ProbBoard {
     }
 
     /**
-     * ESTRATÈGIA 2: Solució Avariciosa (Greedy). Busquem sempre el centre més proper per assignar l'helicòpter.
+     * Estratègia d'inicialització Informada (Greedy): Genera un estat inicial agrupant
+     * geogràficament els rescats, assignant cada grup a un helicòpter del centre més proper.
      */
     private void generarSolucioAvariciosa() {
         int helisPerCentre = numHelicopters / totsElsCentres.size();
         java.util.Random rand = new java.util.Random();
 
         for (int idGrup = 0; idGrup < totsElsGrups.size(); idGrup++) {
-
             Grupo grup = totsElsGrups.get(idGrup);
             int personesDelGrup = grup.getNPersonas();
 
-            // PAS 1: Busquem a quin centre de rescat li queda més a prop aquest grup de persones.
             int idCentreMesProper = 0;
             double distanciaMinima = Double.MAX_VALUE;
 
             for (int idCentre = 0; idCentre < totsElsCentres.size(); idCentre++) {
                 Centro centre = totsElsCentres.get(idCentre);
-
-                // Apliquem Pitàgores de tota la vida per trobar la distància en línia recta.
                 double dx = grup.getCoordX() - centre.getCoordX();
                 double dy = grup.getCoordY() - centre.getCoordY();
                 double distancia = Math.sqrt(dx * dx + dy * dy);
 
-                // Ens guardem el centre si està més a prop que els que ja hem mirat.
                 if (distancia < distanciaMinima) {
                     distanciaMinima = distancia;
                     idCentreMesProper = idCentre;
                 }
             }
 
-            // PAS 2: Un cop sabem quin és el centre, agafem un dels helicòpters d'aquella base.
             int idHeli = (idCentreMesProper * helisPerCentre) + rand.nextInt(helisPerCentre);
-
-            // PAS 3: Pugem el grup a l'helicòpter d'aquell centre vigilant de no superar el pes màxim,
-            // exactament igual que ho fèiem a la solució aleatòria.
             ArrayList<ArrayList<Integer>> viatgesHeli = assignacioHelicopters.get(idHeli);
 
             if (viatgesHeli.isEmpty()) {
@@ -139,7 +128,6 @@ public class ProbBoard {
             }
 
             ArrayList<Integer> ultimViatge = viatgesHeli.get(viatgesHeli.size() - 1);
-
             int personesAlViatge = 0;
             for (int idGrupViatge : ultimViatge) {
                 personesAlViatge += totsElsGrups.get(idGrupViatge).getNPersonas();
@@ -155,19 +143,16 @@ public class ProbBoard {
         }
     }
 
-    // --- MÈTODES OBLIGATORIS PER A LA LLIBRERIA D'AIMA ---
-
     /**
-     * HEURÍSTICA 1: Calcula el temps de vol i rescat base. Com menys trigui, millor serà l'estat.
+     * Funció heurística 1: Calcula el temps total acumulat de vol i operació de tota la flota,
+     * incloent-hi distàncies de vol, temps d'embarcament i penalitzacions per viatges consecutius.
+     * @return El cost total de l'estat en minuts.
      */
     public double heuristic() {
         double tempsTotalFlota = 0.0;
         int helisPerCentre = numHelicopters / totsElsCentres.size();
 
-        // Repassem el llibre de ruta de cada helicòpter.
         for (int i = 0; i < assignacioHelicopters.size(); i++) {
-
-            // Així deduïm des de quina base surt l'helicòpter que estem mirant.
             int idCentre = i / helisPerCentre;
             Centro centre = totsElsCentres.get(idCentre);
 
@@ -176,47 +161,39 @@ public class ProbBoard {
 
             ArrayList<ArrayList<Integer>> viatges = assignacioHelicopters.get(i);
 
-            // Per cada viatge d'aquest helicòpter:
             for (int v = 0; v < viatges.size(); v++) {
                 ArrayList<Integer> viatge = viatges.get(v);
                 if (viatge.isEmpty()) continue;
 
-                // Penalització: si no és el primer vol del dia, triga 10 minuts a descarregar a la base.
+                // Penalització per múltiples viatges del mateix helicòpter
                 if (v > 0) tempsTotalFlota += 10.0;
 
-                // El pilot arrenca el vol des de la base (el centre).
                 double posActualX = coordX_Centre;
                 double posActualY = coordY_Centre;
 
-                // Visitem els grups d'aquest viatge un per un.
                 for (int g = 0; g < viatge.size(); g++) {
                     int idGrup = viatge.get(g);
                     Grupo grup = totsElsGrups.get(idGrup);
 
-                    // A) Càlcul del vol: Distància entre on estem ara i el pròxim grup.
                     double dx = grup.getCoordX() - posActualX;
                     double dy = grup.getCoordY() - posActualY;
                     double distancia = Math.sqrt(dx * dx + dy * dy);
 
-                    // L'enunciat diu que vola a 100km/h. Ho passem directament a minuts de vol.
                     tempsTotalFlota += (distancia / 100.0) * 60.0;
 
-                    // B) Càlcul de càrrega: Pugem la gent a bord.
                     int persones = grup.getNPersonas();
                     int prioritat = grup.getPrioridad();
 
                     if (prioritat == 1) {
-                        tempsTotalFlota += (persones * 2.0); // Prioritat 1 vol dir que tenen ferits (2 min per pujar-los)
+                        tempsTotalFlota += (persones * 2.0);
                     } else {
-                        tempsTotalFlota += (persones * 1.0); // Prioritat 2 vol dir que estan sans (1 min ràpid)
+                        tempsTotalFlota += (persones * 1.0);
                     }
 
-                    // Actualitzem la posició perquè l'helicòpter ja està flotant a sobre del grup.
                     posActualX = grup.getCoordX();
                     posActualY = grup.getCoordY();
                 }
 
-                // C) Tornada a casa: Distància des de l'últim grup del viatge fins a la base per descarregar.
                 double dxTornada = coordX_Centre - posActualX;
                 double dyTornada = coordY_Centre - posActualY;
                 double distanciaTornada = Math.sqrt(dxTornada * dxTornada + dyTornada * dyTornada);
@@ -224,19 +201,19 @@ public class ProbBoard {
                 tempsTotalFlota += (distanciaTornada / 100.0) * 60.0;
             }
         }
-
-        return tempsTotalFlota; // Retornem tots els minuts sumats de tota la flota.
+        return tempsTotalFlota;
     }
 
     /**
-     * HEURÍSTICA 2: El mateix que la primera, però castiguem l'algorisme si fa esperar massa als ferits.
+     * Funció heurística 2: Calcula el temps requerit per realitzar el darrer rescat
+     * d'un grup marcat amb prioritat alta (ferits).
+     * @return El cost de l'estat en minuts basat en l'eficiència del rescat de ferits.
      */
     public double heuristic2() {
         int helisPerCentre = numHelicopters / totsElsCentres.size();
         double tempsUltimP1 = 0.0;
-        // Repassem el llibre de ruta de cada helicòpter.
+
         for (int i = 0; i < assignacioHelicopters.size(); i++) {
-            // Així deduïm des de quina base surt l'helicòpter que estem mirant.
             int idCentre = i / helisPerCentre;
             Centro centre = totsElsCentres.get(idCentre);
 
@@ -247,54 +224,44 @@ public class ProbBoard {
 
             double tempsDesdeInici = 0.0;
             double tempsUltimP1Heli = 0.0;
-            // Per cada viatge d'aquest helicòpter:
+
             for (int v = 0; v < viatges.size(); v++) {
                 ArrayList<Integer> viatge = viatges.get(v);
                 if (viatge.isEmpty()) continue;
 
-                // Si no és el primer vol del dia, triga 10 minuts més a descarregar a la base.
                 if (v > 0) tempsDesdeInici += 10.0;
 
-                // El pilot arrenca el vol des de la base (el centre).
                 double posActualX = coordX_Centre;
                 double posActualY = coordY_Centre;
-
-                // Visitem els grups d'aquest viatge un per un.
                 boolean P1Present = false;
+
                 for (int g = 0; g < viatge.size(); g++) {
                     int idGrup = viatge.get(g);
                     Grupo grup = totsElsGrups.get(idGrup);
 
-                    // A) Càlcul del vol: Distància entre on estem ara i el pròxim grup.
                     double dx = grup.getCoordX() - posActualX;
                     double dy = grup.getCoordY() - posActualY;
                     double distancia = Math.sqrt(dx * dx + dy * dy);
 
-                    // L'enunciat diu que vola a 100km/h. Ho passem directament a minuts de vol.
                     tempsDesdeInici += (distancia / 100.0) * 60.0;
 
-                    // B) Càlcul de càrrega: Pugem la gent a bord.
                     int persones = grup.getNPersonas();
                     int prioritat = grup.getPrioridad();
 
                     if (prioritat == 1) {
-                        tempsDesdeInici += (persones * 2.0); // Prioritat 1 vol dir que tenen ferits (2 min per pujar-los)
+                        tempsDesdeInici += (persones * 2.0);
                         P1Present = true;
                     } else {
-                        tempsDesdeInici += (persones * 1.0); // Prioritat 2 vol dir que estan sans (1 min ràpid)
+                        tempsDesdeInici += (persones * 1.0);
                     }
 
-                    // Actualitzem la posició perquè l'helicòpter ja està flotant a sobre del grup.
                     posActualX = grup.getCoordX();
                     posActualY = grup.getCoordY();
                 }
 
-                // C) Tornada a casa: Distància des de l'últim grup del viatge fins a la base per descarregar.
                 double dxTornada = coordX_Centre - posActualX;
                 double dyTornada = coordY_Centre - posActualY;
-                double distanciaTornada = Math.sqrt(
-                    dxTornada * dxTornada + dyTornada * dyTornada
-                );
+                double distanciaTornada = Math.sqrt(dxTornada * dxTornada + dyTornada * dyTornada);
 
                 tempsDesdeInici += (distanciaTornada / 100.0) * 60.0;
                 if (P1Present) tempsUltimP1Heli = tempsDesdeInici;
@@ -309,54 +276,49 @@ public class ProbBoard {
     }
 
     public double ponderacioHeuristics() {
-        return heuristic() + 2*heuristic2();
+        return heuristic() + 2 * heuristic2();
     }
 
+    /**
+     * Mètode exigit per la llibreria AIMA per verificar si un estat és final.
+     * Atès que es tracta d'un problema d'optimització (Cerca Local), no existeix
+     * un estat meta absolut i, per tant, sempre retorna fals.
+     * @return false.
+     */
     public boolean is_goal() {
-        // En un problema d'optimització (Cerca Local) mai hi ha un final perfecte, sempre busquem una versió "millor".
         return false;
     }
 
-    // --- ELS NOSTRES DOS OPERADORS (Les "eines" de la IA per moure coses) ---
-
     /**
-     * OPERADOR 1: Agafem un grup de gent i els passem a un altre helicòpter.
+     * Operador 1: "Moure Grup". Reassigna un grup extret d'una posició i un viatge concrets
+     * i l'insereix al darrer viatge disponible de l'helicòpter de destí. Si la restricció
+     * de capacitat no ho permet, genera un viatge nou de forma automàtica.
      */
     public void moureGrup(int idHeliOrigen, int numViatgeOrigen, int posGrup, int idHeliDesti) {
-
-        // 1. Identifiquem a quin grup volem treure i quanta gent hi ha.
         ArrayList<Integer> viatgeOrigen = assignacioHelicopters.get(idHeliOrigen).get(numViatgeOrigen);
         int idGrup = viatgeOrigen.get(posGrup);
         int personesDelGrup = totsElsGrups.get(idGrup).getNPersonas();
 
-        // 2. Els fem baixar de l'helicòpter d'origen.
         viatgeOrigen.remove(posGrup);
 
-        // Si veiem que a l'helicòpter d'origen ja no queda absolutament ningú en aquest vol, cancel·lem el vol.
         if (viatgeOrigen.isEmpty()) {
             assignacioHelicopters.get(idHeliOrigen).remove(numViatgeOrigen);
         }
 
-        // 3. Ens els emportem a l'helicòpter de destí que ens demanin.
         ArrayList<ArrayList<Integer>> viatgesDesti = assignacioHelicopters.get(idHeliDesti);
-
         if (viatgesDesti.isEmpty()) {
             viatgesDesti.add(new ArrayList<>());
         }
 
-        // Intentem posar-los a l'últim viatge programat de l'helicòpter de destí.
         ArrayList<Integer> ultimViatgeDesti = viatgesDesti.get(viatgesDesti.size() - 1);
-
         int personesAlViatge = 0;
         for (int grupViatge : ultimViatgeDesti) {
             personesAlViatge += totsElsGrups.get(grupViatge).getNPersonas();
         }
 
-        // Mirem la llibreta: passen de 15 persones? Són més de 3 grups junts?
         if (ultimViatgeDesti.size() < 3 && (personesAlViatge + personesDelGrup) <= 15) {
-            ultimViatgeDesti.add(idGrup); // Hi caben! Pugen amb la resta.
+            ultimViatgeDesti.add(idGrup);
         } else {
-            // No hi caben, doncs el pilot haurà de fer un viatge extra només per a ells.
             ArrayList<Integer> nouViatge = new ArrayList<>();
             nouViatge.add(idGrup);
             viatgesDesti.add(nouViatge);
@@ -364,8 +326,9 @@ public class ProbBoard {
     }
 
     /**
-     * OPERADOR 2: Fem un "Swap" (Intercanvi). Agafem un grup de l'Helicòpter A, un de l'Helicòpter B i els canviem de lloc.
-     * Retornem true si ens ha sortit bé, i false si amb el canvi l'helicòpter es desestabilitza per excés de pes.
+     * Operador 2: "Intercanviar Grups". Avalua la viabilitat física d'un intercanvi directe
+     * de dos grups entre diferents vols.
+     * @return Cert si l'intercanvi manté ambdós vols dins de les restriccions de capacitat, fals altrament.
      */
     public boolean intercanviarGrups(int h1, int v1, int p1, int h2, int v2, int p2) {
         ArrayList<Integer> viatge1 = assignacioHelicopters.get(h1).get(v1);
@@ -377,30 +340,28 @@ public class ProbBoard {
         int persones1 = totsElsGrups.get(idGrup1).getNPersonas();
         int persones2 = totsElsGrups.get(idGrup2).getNPersonas();
 
-        // Calculem el pes actual de cada helicòpter abans de fer l'intercanvi.
         int capacitatActualViatge1 = 0;
         for (int g : viatge1) capacitatActualViatge1 += totsElsGrups.get(g).getNPersonas();
 
         int capacitatActualViatge2 = 0;
         for (int g : viatge2) capacitatActualViatge2 += totsElsGrups.get(g).getNPersonas();
 
-        // Fem els càlculs mentals: si baixem el Grup 1 i pugem el Grup 2... quanta gent hi haurà?
         int novaCapacitat1 = capacitatActualViatge1 - persones1 + persones2;
         int novaCapacitat2 = capacitatActualViatge2 - persones2 + persones1;
 
-        // Comprovem que cap dels dos helicòpters passi de les 15 persones de límit físic.
         if (novaCapacitat1 <= 15 && novaCapacitat2 <= 15) {
-            // El canvi és viable! Fem el Swap a les nostres llistes.
             viatge1.set(p1, idGrup2);
             viatge2.set(p2, idGrup1);
             return true;
         }
 
-        // Si resulta que un dels dos passava de les 15 persones amb l'intercanvi, el deneguem i retornem false.
         return false;
     }
 
-    // Mètode de neteja: ens imprimeix pel terminal on és cadascú per comprovar que estem programant bé.
+    /**
+     * Mètode de traça: Imprimeix per consola l'estructura de rutes i assignacions de tota la flota
+     * per tal de monitoritzar l'estat actual en fase de desenvolupament.
+     */
     public void imprimirEstat() {
         System.out.println("--- ESTAT ACTUAL DE LA FLOTA ---");
         for (int i = 0; i < assignacioHelicopters.size(); i++) {
