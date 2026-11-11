@@ -1,4 +1,4 @@
-# Projecte IA
+# Projecte IA Cerca Local
 
 L'estructura de fitxers del projecte és:
 1. La carpeta src/ on guardem la implementació de totes les classes de l'AIMA
@@ -14,3 +14,9 @@ make run
 ## Netejar
 
 make clean
+
+## 
+
+Nota: 10/10
+
+Autors: Maria Caldart Deu, Nathaniel Cruz Pascual, Aleix Molins Teulé
